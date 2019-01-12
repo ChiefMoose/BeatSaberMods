@@ -13,14 +13,21 @@ namespace PerfectScoreMod
         {
             string leaderboardID = LeaderboardsModel.GetLeaderboardID(Beatmap);
 
-            // This prevents from removing existing scores from the current leaderboard.
+            // This can return null when no scores exist for said leaderboard.
             IList<LocalLeaderboardsModel.ScoreData> tempCollection = 
                 _localLeaderboard.GetScores(leaderboardID, LocalLeaderboardsModel.LeaderboardType.AllTime);
-
-            if (_scoreDataCollection == null || _scoreDataCollection.Count > 0)
+            
+            if (tempCollection == null)
             {
-                _scoreDataCollection = new List<LocalLeaderboardsModel.ScoreData>();
+                // In the case there is no competition we want to disable the mod.
+                LabelHeader.text = string.Empty;
+                return;
             }
+
+            TrySubscribeOnScoreDidChangeEvent();
+
+            // This prevents from removing existing scores from the current leaderboard in memory.
+            _scoreDataCollection = new List<LocalLeaderboardsModel.ScoreData>();
             _scoreDataCollection.AddRange(tempCollection);
 
             LeaderboardScoreLabel = GenerateUILabel(
@@ -33,6 +40,13 @@ namespace PerfectScoreMod
 
         protected override void OnScoreDidChangeEvent(int currentScore)
         {
+            if (_scoreDataCollection.Count == 0)
+            {
+                LeaderboardScoreLabel.text = "Come at me bro";
+                TryUnsubscribeOnScoreDidChangeEvent();
+                return;
+            }
+
             _scoreDataCollection.RemoveAll(sData => sData._score <= currentScore);
             LeaderboardScoreLabel.text = ComposeScoreData(_scoreDataCollection.Last(), _scoreDataCollection.Count);
         }

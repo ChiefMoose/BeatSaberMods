@@ -18,9 +18,11 @@ namespace PerfectScoreMod
         /// <summary>
         /// Score controller used to subscribe to required events.
         /// </summary>
-        private ScoreController ScoreController { get; set; }
+        private ScoreController ScrController { get; set; }
 
         protected IDifficultyBeatmap Beatmap { get; private set; }
+
+        protected TextMeshPro LabelHeader { get; set; }
 
         protected abstract void Init();
         protected abstract bool TryResolveChildResources();
@@ -38,10 +40,7 @@ namespace PerfectScoreMod
 
         private void OnDestroy()
         {
-            if (ScoreController != null)
-            {
-                ScoreController.scoreDidChangeEvent -= OnScoreDidChangeEvent;
-            }
+            TryUnsubscribeOnScoreDidChangeEvent();
         }
 
         private Task GetLeaderboardScore()
@@ -55,12 +54,39 @@ namespace PerfectScoreMod
                     canResolveResources = TryResolveResources();
                 }
 
-                ScoreController.scoreDidChangeEvent += OnScoreDidChangeEvent;
-
-                GenerateUILabel("Label", "Current Competition", 2, _labelPosition);
+                LabelHeader = GenerateUILabel("Label", "Current Competition", 2, _labelPosition);
 
                 Init();
             });
+        }
+
+        /// <summary>
+        /// Tries to subscribe to the <seealso cref="ScoreController.scoreDidChangeEvent"/>.
+        /// </summary>
+        /// <returns>Returns true if we are able to successfully subscribe. Otherwise returns false.</returns>
+        protected bool TrySubscribeOnScoreDidChangeEvent()
+        {
+            if (ScrController == null)
+            {
+                return false;
+            }
+            ScrController.scoreDidChangeEvent += OnScoreDidChangeEvent;
+            return true;
+        }
+
+        /// <summary>
+        /// Tries to unsubscribe to the <seealso cref="ScoreController.scoreDidChangeEvent"/>.
+        /// </summary>
+        /// <returns>Returns true if we are able to successfully unsubscribe. Otherwise returns false.</returns>
+        protected bool TryUnsubscribeOnScoreDidChangeEvent()
+        {
+            if (ScrController == null)
+            {
+                return false;
+            }
+
+            ScrController.scoreDidChangeEvent -= OnScoreDidChangeEvent;
+            return true;
         }
 
         /// <summary>
@@ -107,11 +133,11 @@ namespace PerfectScoreMod
 
         private bool TryResolveResources()
         {
-            ScoreController = Resources.FindObjectsOfTypeAll<ScoreController>().FirstOrDefault();
+            ScrController = Resources.FindObjectsOfTypeAll<ScoreController>().FirstOrDefault();
             Beatmap = Resources.FindObjectsOfTypeAll<StandardLevelDetailViewController>().FirstOrDefault().difficultyBeatmap;
 
             // Resolve any addiitonal resources that may be required for child types.
-            if (ScoreController != null && TryResolveChildResources())
+            if (ScrController != null && TryResolveChildResources())
             {
                 return true;
             }
